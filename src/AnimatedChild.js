@@ -1,63 +1,63 @@
 import React, { Component } from "react";
-import { Animated } from "react-native";
+import { Animated, View } from "react-native";
+import R from "ramda";
+
+const initialState = props => ({
+  currentChildren: props.children,
+  nextChildren: null,
+  animatedValue: new Animated.Value(props.initialAnimatedValue || 0)
+});
 
 export class AnimatedChild extends Component {
   constructor(props) {
     super(props);
-    this.state = {
-      currentRouteKey: props.currentRouteKey,
-      currentChild: props.children,
-      nextRouteKey: null,
-      nextChildren: null,
-      animating: false
-    };
+    this.animationEnded = this.animationEnded.bind(this);
+    this.state = initialState(props);
   }
 
-  static getDerivedStateFromProps(nextProps, previousState) {
-    // figure out what to do with the children
-    const navigating =
-      nextProps.currentRouteKey && !previousState.currentRouteKey;
-    // const animationEnded = this.props.animating && !nextProps.animating;
+  childHasChanged(prevProps, currentProps) {
+    return prevProps.children !== currentProps.children;
+  }
 
-    if (navigating) {
-      console.log("animate");
-      // we were rendering, but now we're heading back up to the parent,
-      // so we need to save the children (har har) so we can render them
-      // while the animation is playing
-      return {
-        ...previousState,
-        nextRouteKey: nextProps.currentRouteKey,
-        nextChildren: nextProps.children,
-        animating: true
-      };
+  componentDidUpdate(prevProps) {
+    if (this.childHasChanged(prevProps, this.props)) {
+      this.setState(
+        R.merge(R.__, {
+          nextChildren: this.props.children
+        }),
+        this.animate
+      );
     }
-    console.log("not animating");
-    return previousState;
+  }
+
+  animate() {
+    const { animationType = "timing", animationConfig } = this.props;
+    Animated[animationType](this.state.animatedValue, animationConfig).start(
+      ({ finished }) => {
+        this.animationEnded();
+      }
+    );
+  }
+
+  animationEnded() {
+    this.setState(initialState(this.props));
   }
 
   render() {
-    const { children } = this.props;
-    const { previousChildren } = this.state;
-    const anim = new Animated.Value(0);
+    const { currentStyles, nextStyles, containerStyles } = this.props;
+    const { currentChildren, nextChildren, animatedValue } = this.state;
+
     return (
-      <Animated.View
-        style={{
-          position: "absolute",
-          left: 0,
-          right: 0,
-          top: anim.interpolate({
-            inputRange: [0, 1],
-            outputRange: [20, 0]
-          }),
-          opacity: anim.interpolate({
-            inputRange: [0, 0.75],
-            outputRange: [0, 1]
-          })
-        }}
-      >
-        {/* render the old ones if we have them */}
-        {previousChildren || children}
-      </Animated.View>
+      <View style={containerStyles}>
+        <Animated.View style={currentStyles(animatedValue)}>
+          {currentChildren}
+        </Animated.View>
+        {nextChildren && (
+          <Animated.View style={nextStyles(animatedValue)}>
+            {nextChildren}
+          </Animated.View>
+        )}
+      </View>
     );
   }
 }

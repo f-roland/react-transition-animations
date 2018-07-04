@@ -1,78 +1,61 @@
 import React, { Component } from "react";
-import { Animated, StyleSheet, View, Easing } from "react-native";
-import { Link } from "react-router-native";
+import { Animated, StyleSheet, View, Text } from "react-native";
 import { AnimatedChild } from "./AnimatedChild";
 
-const initialState = props => ({
-  currentTitle: props.match.params.page_id || "header",
-  nextTitle: null,
-  animate: new Animated.Value(0)
-});
+const Label = ({ textValue }) => <Text style={styles.text}>{textValue}</Text>;
 
 export class NavBar extends Component {
-  state = initialState(this.props);
-
-  componentDidUpdate(prevProps, prevState) {
-    console.log("did update", prevProps, this.props);
-    if (prevProps.match.params.page_id != this.props.match.params.page_id) {
-      this.setState({
-        ...prevState,
-        nextTitle: this.props.match.params.page_id
-      });
-      this.animate();
-    }
-  }
-
-  animate() {
-    Animated.timing(this.state.animate, {
-      toValue: 1,
-      duration: 1000,
-      easing: Easing.out(Easing.ease),
-      useNativeDriver: true
-    }).start(() => this.setState(initialState(this.props)));
-  }
-
   render() {
-    console.log(this.props, this.state);
-
-    const previousStyles = {
-      opacity: this.state.animate.interpolate({
+    const currentStyles = animatedValue => ({
+      opacity: animatedValue.interpolate({
         inputRange: [0, 1],
         outputRange: [1, 0]
       }),
       transform: [
         {
-          translateX: this.state.animate.interpolate({
+          translateX: animatedValue.interpolate({
             inputRange: [0, 1],
             outputRange: [0, -150]
           })
         }
       ]
-    };
+    });
 
-    const currentStyles = {
-      opacity: this.state.animate,
+    const nextStyles = animatedValue => ({
+      opacity: animatedValue,
       transform: [
         {
-          translateX: this.state.animate.interpolate({
+          translateX: animatedValue.interpolate({
             inputRange: [0, 1],
             outputRange: [150, -10]
           })
         }
       ]
+    });
+
+    const animationConfig = {
+      toValue: 1,
+      duration: 1000,
+      useNativeDriver: true
     };
+
+    const animatedChildProps = {
+      animationType: "timing",
+      animationConfig,
+      currentStyles,
+      nextStyles,
+      initialAnimatedValue: 0,
+      containerStyles: { flexDirection: "row" }
+    };
+
+    const textValue = this.props.match.params.page_id || "header";
 
     return (
       <View style={styles.container}>
         <View style={styles.header}>
-          <Animated.Text style={[styles.text, previousStyles]}>
-            {this.state.currentTitle}
-          </Animated.Text>
-          {this.state.currentTitle && (
-            <Animated.Text style={[styles.text, currentStyles]}>
-              {this.state.nextTitle}
-            </Animated.Text>
-          )}
+          <AnimatedChild {...animatedChildProps}>
+            <Label textValue={textValue} />
+          </AnimatedChild>
         </View>
       </View>
     );
@@ -87,6 +70,7 @@ const styles = StyleSheet.create({
   },
   header: {
     flex: 1,
+    height: 40,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center"

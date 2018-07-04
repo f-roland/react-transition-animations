@@ -1,14 +1,20 @@
 import React, { Component } from "react";
 import { Animated, View } from "react-native";
+import R from "ramda";
 
-export function withAnimation(Switch) {
-  return class AnimatedSwitch extends Component {
-    constructor(props) {
-      super(props);
-      this.state = {
-        previousChildren: null,
-        locationKey: props.location.key
-      };
+const initialState = props => ({
+  currentElement: props.element,
+  nextElement: null,
+  animatedValue: new Animated.Value(0)
+});
+
+export function withAnimatedTransition(Children) {
+  return class AnimatedTransition extends Component {
+    state = initialState(this.props);
+
+
+    componentDidUpdate(props, state) {
+      if (!R.equals(props.children))
     }
 
     static getDerivedStateFromProps(nextProps, prevState) {
